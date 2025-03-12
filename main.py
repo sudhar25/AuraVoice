@@ -81,7 +81,7 @@ def verify_pronunciation(audio_file, reference_word):
         return False, []
 
 # List of words for the user to choose from
-words = ["apple", "banana", "cherry", "date", "elderberry"]
+words = ["apple", "banana", "cherry", "date", "elderberry","airplane"]
 
 # **Step 1: Ask user to choose a word**
 print("Please choose a word from the following list:")
