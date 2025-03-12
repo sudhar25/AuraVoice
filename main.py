@@ -86,7 +86,7 @@ words = ["apple", "banana", "cherry", "date", "elderberry","airplane"]
 # **Step 1: Ask user to choose a word**
 print("Please choose a word from the following list:")
 for i, word in enumerate(words, 1):
-    print(f"{i}. {word}")
+        print(f"{i}. {word}")
 
 choice = int(input("Enter the number corresponding to your choice: "))
 reference_word = words[choice - 1]
