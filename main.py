@@ -7,6 +7,7 @@ import os
 import pyttsx3
 import nltk
 from gtts import gTTS
+import time  # Add this import at the top of the file
 
 # Initialize CMU Pronouncing Dictionary
 try:
@@ -80,18 +81,16 @@ def verify_pronunciation(audio_file, reference_word):
         print(f"Error: {e}")
         return False, []
 
-# List of words for the user to choose from
-words = ["apple", "banana", "cherry", "date", "elderberry","airplane"]
+# **Step 1: Ask user to input a word**
+while True:
+    reference_word = input("Please enter a word: ").strip().lower()
+    if reference_word in pron_dict:
+        break
+    else:
+        print("The word is not in the CMU Pronouncing Dictionary. Please try again.")
 
-# **Step 1: Ask user to choose a word**
-print("Please choose a word from the following list:")
-for i, word in enumerate(words, 1):
-        print(f"{i}. {word}")
-
-choice = int(input("Enter the number corresponding to your choice: "))
-reference_word = words[choice - 1]
 print(f"Word chosen: {reference_word}")
-text_to_speech(f"You chose {reference_word}. Now, repeat it.")
+#text_to_speech("Repeat the word")
 
 try:
     # **Step 2: Capture pronunciation attempt**
@@ -113,6 +112,7 @@ try:
         correct_phon = ' '.join(correct_phonemes)
         text_to_speech(f"Incorrect pronunciation. It should sound like: {correct_phon}")
         text_to_speech(reference_word)  # Announce the correct pronunciation
+        time.sleep(7)  # Hold the corrected pronunciation for 7 seconds
 
 except sr.UnknownValueError:
     text_to_speech("I couldn't understand what you said.")
