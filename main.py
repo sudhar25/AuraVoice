@@ -7,7 +7,7 @@ import os
 import pyttsx3
 import nltk
 from gtts import gTTS
-import time  # Add this import at the top of the file
+import time  
 
 # Initialize CMU Pronouncing Dictionary
 try:
