@@ -7,7 +7,11 @@ import os
 import pyttsx3
 import nltk
 from gtts import gTTS
-import time  
+import time
+from datetime import datetime
+
+# Import the database functions
+from attempts import create_database, save_attempt, view_attempts
 
 # Initialize CMU Pronouncing Dictionary
 try:
@@ -17,6 +21,9 @@ except LookupError:
     pron_dict = cmudict.dict()
 
 recognizer = sr.Recognizer()
+
+# Create the database and table if they don't exist
+create_database()
 
 def extract_acoustic_features(audio_file):
     """Extract MFCC features from audio"""
@@ -75,11 +82,11 @@ def verify_pronunciation(audio_file, reference_word):
         lev_score = Levenshtein.distance(''.join(user_phonemes), ''.join(ref_phonemes))
 
         os.remove(reference_audio)  # Clean up reference audio file
-        return dtw_score < 15 and lev_score < 3, ref_phonemes
+        return dtw_score, lev_score, dtw_score < 15 and lev_score < 3, ref_phonemes
 
     except Exception as e:
         print(f"Error: {e}")
-        return False, []
+        return None, None, False, []
 
 # **Step 1: Ask user to input a word**
 while True:
@@ -90,7 +97,6 @@ while True:
         print("The word is not in the CMU Pronouncing Dictionary. Please try again.")
 
 print(f"Word chosen: {reference_word}")
-#text_to_speech("Repeat the word")
 
 try:
     # **Step 2: Capture pronunciation attempt**
@@ -105,7 +111,14 @@ try:
         f.write(audio_attempt.get_wav_data())
 
     # **Step 3: Verify pronunciation**
-    is_correct, correct_phonemes = verify_pronunciation(user_audio_file, reference_word)
+    dtw_score, lev_score, is_correct, correct_phonemes = verify_pronunciation(user_audio_file, reference_word)
+    result = "correct" if is_correct else "incorrect"
+
+    # Save the attempt to the database
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    save_attempt(reference_word, timestamp, user_audio_file, dtw_score, lev_score, result)
+
+    # Provide feedback to the user
     if is_correct:
         text_to_speech("Great job! Your pronunciation is correct.")
     else:
@@ -118,3 +131,11 @@ except sr.UnknownValueError:
     text_to_speech("I couldn't understand what you said.")
 except sr.RequestError as e:
     text_to_speech(f"Could not request results from Google Speech Recognition; {e}")
+
+# **Step 4: Ask if the user wants to view all attempts**
+view_data = input("Do you want to view all attempts? (yes/no): ").strip().lower()
+if view_data == "yes":
+    print("\nViewing all attempts:")
+    view_attempts()
+else:
+    print("Exiting without viewing attempts.")
