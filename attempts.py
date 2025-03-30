@@ -3,7 +3,7 @@ import os
 
 # Get the directory of the current script
 script_dir = os.path.dirname(os.path.abspath(__file__))
-
+88
 # Define the path to the database file
 db_path = os.path.join(script_dir, 'pronunciation.db')
 
