@@ -1,15 +1,16 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 import speech_recognition as sr
 import librosa
-import numpy as np
 import os
-import sqlite3
 import nltk
 from nltk.corpus import cmudict
 from Levenshtein import distance as levenshtein_distance
+from dotenv import load_dotenv
 
-
+load_dotenv()
+# Ensure CMU Pronouncing Dictionary is downloaded
 try:
     pron_dict = cmudict.dict()
 except LookupError:
@@ -20,36 +21,33 @@ except LookupError:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# Database configuration (Step 4: Update with your actual Render DATABASE_URL)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
 recognizer = sr.Recognizer()
 
-# Database setup for the app
-def init_db():
-    conn = sqlite3.connect("pronunciation_attempts.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS attempts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            word TEXT,
-            recognized_text TEXT,
-            similarity_score REAL,
-            is_correct BOOLEAN,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-init_db()
+# SQLAlchemy Model for Attempts
+class Attempt(db.Model):
+    __tablename__ = 'attempts'
+    id = db.Column(db.Integer, primary_key=True)
+    word = db.Column(db.String(100), nullable=False)
+    recognized_text = db.Column(db.String(500), nullable=False)
+    similarity_score = db.Column(db.Float, nullable=False)
+    is_correct = db.Column(db.Boolean, nullable=False)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now())
 
 def save_attempt(word, recognized_text, similarity_score, is_correct):
-    conn = sqlite3.connect("pronunciation_attempts.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO attempts (word, recognized_text, similarity_score, is_correct)
-        VALUES (?, ?, ?, ?)
-    """, (word, recognized_text, similarity_score, is_correct))
-    conn.commit()
-    conn.close()
+    new_attempt = Attempt(
+        word=word,
+        recognized_text=recognized_text,
+        similarity_score=similarity_score,
+        is_correct=is_correct
+    )
+    db.session.add(new_attempt)
+    db.session.commit()
 
 def extract_acoustic_features(audio_file):
     """Extract MFCC features from audio"""
@@ -73,16 +71,16 @@ def calculate_similarity(word1, word2):
 def analyze_speech():
     if 'audio_file' not in request.files or 'word' not in request.form:
         return jsonify({'error': 'Missing audio file or word'}), 400
-    
+
     audio_file = request.files['audio_file']
     word = request.form['word'].strip()
-    
+
     # Save audio file permanently in database
     audio_dir = "saved_audio"
     os.makedirs(audio_dir, exist_ok=True)
     file_path = os.path.join(audio_dir, f"{word}.wav")
     audio_file.save(file_path)
-    
+
     try:
         # Speech Recognition main logic
         with sr.AudioFile(file_path) as source:
@@ -93,25 +91,25 @@ def analyze_speech():
                 return jsonify({'error': 'Could not understand the audio'}), 400
             except sr.RequestError:
                 return jsonify({'error': 'Speech recognition service unavailable'}), 500
-        
+
         # Calculate Pronunciation Accuracy
         similarity_score = calculate_similarity(word, recognized_text)
         is_correct = similarity_score >= 0.4  # 80% accuracy threshold
-        
+
         # Save attempt to database for viewing
-    
         save_attempt(word, recognized_text, similarity_score, is_correct)
-        
+
         return jsonify({
             'recognized_text': recognized_text,
             'feedback': 'Correct pronunciation' if is_correct else 'Try again',
             'similarity_score': round(similarity_score, 2),
             'is_correct': is_correct
         })
-    
-    except Exception as e:
 
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()  # Only needs to run once to create tables
     app.run(host='0.0.0.0', port=8000, debug=True)
