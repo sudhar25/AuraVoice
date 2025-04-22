@@ -9,7 +9,7 @@ import nltk
 from nltk.corpus import cmudict
 from Levenshtein import distance as levenshtein_distance
 
-# Ensure CMU Pronouncing Dictionary is downloaded
+
 try:
     pron_dict = cmudict.dict()
 except LookupError:
@@ -22,7 +22,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 recognizer = sr.Recognizer()
 
-# Database setup
+# Database setup for the app
 def init_db():
     conn = sqlite3.connect("pronunciation_attempts.db")
     cursor = conn.cursor()
@@ -77,14 +77,14 @@ def analyze_speech():
     audio_file = request.files['audio_file']
     word = request.form['word'].strip()
     
-    # Save audio file permanently
+    # Save audio file permanently in database
     audio_dir = "saved_audio"
     os.makedirs(audio_dir, exist_ok=True)
     file_path = os.path.join(audio_dir, f"{word}.wav")
     audio_file.save(file_path)
     
     try:
-        # Speech Recognition
+        # Speech Recognition main logic
         with sr.AudioFile(file_path) as source:
             audio_data = recognizer.record(source)
             try:
@@ -98,7 +98,8 @@ def analyze_speech():
         similarity_score = calculate_similarity(word, recognized_text)
         is_correct = similarity_score >= 0.4  # 80% accuracy threshold
         
-        # Save attempt to database
+        # Save attempt to database for viewing
+    
         save_attempt(word, recognized_text, similarity_score, is_correct)
         
         return jsonify({
