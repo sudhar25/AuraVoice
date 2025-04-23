@@ -19,7 +19,7 @@ except LookupError:
     nltk.download('cmudict')
     pron_dict = cmudict.dict()
 
-# Initialize Flask app
+# Initialize Flask app api
 app = Flask(__name__)
 CORS(app)
 
