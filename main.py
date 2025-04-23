@@ -6,6 +6,7 @@ import librosa
 import os
 import nltk
 from nltk.corpus import cmudict
+import numpy as np
 from Levenshtein import distance as levenshtein_distance
 from dotenv import load_dotenv
 #start
@@ -75,7 +76,7 @@ def analyze_speech():
     word = request.form['word'].strip()
 
     # Save audio file permanently in database
-    audio_dir = "saved_audio"
+    audio_dir = "saved_audio" 
     os.makedirs(audio_dir, exist_ok=True)
     file_path = os.path.join(audio_dir, f"{word}.wav")
     audio_file.save(file_path)
